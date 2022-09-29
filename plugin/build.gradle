@@ -1,10 +1,19 @@
 apply plugin: 'com.github.dcendents.android-maven'
-apply plugin: 'com.jfrog.bintray'
+apply plugin: 'maven-publish'
 
 def rootDir = rootProject.rootDir
 
 apply from: "$rootDir/buildSrc/build.gradle"
-
+publishing {
+    publications {
+        maven(MavenPublication) {
+            groupId = 'com.github.iwhys'
+            artifactId = 'sdk-editor-plugin'
+            version = '1.1.8-SNAPSHOT'
+            from components.java
+        }
+    }
+}
 sourceSets {
     main {
         kotlin {

@@ -60,7 +60,7 @@ class TransformHandler(
             dirInputs += it.directoryInputs
             for (jarInput in it.jarInputs) {
                 classPool.addPathJarInput(jarInput)
-                jarInputs[jarInput.file.nameWithoutExtension] = jarInput
+                jarInputs[jarInput.file.absolutePath] = jarInput
             }
         }
     }
