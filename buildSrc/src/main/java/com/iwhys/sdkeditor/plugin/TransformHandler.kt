@@ -1,10 +1,7 @@
 package com.iwhys.sdkeditor.plugin
 
 import com.android.SdkConstants
-import com.android.build.api.transform.DirectoryInput
-import com.android.build.api.transform.JarInput
-import com.android.build.api.transform.Status
-import com.android.build.api.transform.TransformInvocation
+import com.android.build.api.transform.*
 import com.android.ide.common.workers.ExecutorServiceAdapter
 import com.android.ide.common.workers.WorkerExecutorFacade
 import com.iwhys.sdkeditor.domain.ReplaceClass
@@ -12,8 +9,12 @@ import javassist.ClassPool
 import javassist.CtClass
 import org.apache.commons.io.FileUtils
 import java.io.File
+import java.io.FileOutputStream
 import java.util.concurrent.ForkJoinPool
 import java.util.jar.JarFile
+import java.util.zip.ZipEntry
+import java.util.zip.ZipFile
+import java.util.zip.ZipOutputStream
 
 
 /**
@@ -98,7 +99,7 @@ class TransformHandler(
                     safe { FileUtils.copyFile(jarFile, dest) }
                 } else {
                     log("Found the target jar package：${jarName}, prepare to fix.")
-                    jarInput.handleClass { name !in replaceClasses }
+                    jarInput.removeClass { name !in replaceClasses }
                 }
             } else if (isIncremental && jarInput.status == Status.REMOVED) {
                 dest.delete()
@@ -264,6 +265,36 @@ class TransformHandler(
             gatherInfo()
             true
         }
+    }
+
+    /**
+     * 从jar包中移除被替换的class
+     */
+    private fun JarInput.removeClass(block: CtClass.() -> Boolean) {
+
+//        val dest = outputProvider.jarOutput(this)
+        log("remove replace class")
+        val dest = if (this.name.endsWith("jar")){
+            outputProvider.getContentLocation(
+                this.name, this.contentTypes, this.scopes, Format.JAR)
+        }else{
+            outputProvider.getContentLocation(
+                this.name+this.file.name, this.contentTypes, this.scopes, Format.JAR)
+        }
+
+        val from = ZipFile(this.file)
+        val to   = ZipOutputStream(FileOutputStream(dest))
+        from.entries().toList().forEach {
+           classPool.makeClass(from.getInputStream(it))?.apply {
+               val need = block()
+               if (need) {
+                   to.putNextEntry(ZipEntry(it.name))
+                   to.write(from.getInputStream(it).readBytes())
+               }
+           }
+        }
+        to.closeEntry()
+        to.close()
     }
 
     /**
