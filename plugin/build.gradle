@@ -34,7 +34,7 @@ buildscript {
     }
 }
 
-group = "com.github.iwhys"
+group = "com.github.runforprogram"
 
 //生成源文件
 task sourcesJar(type: Jar, dependsOn: classes) {
